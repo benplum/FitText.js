@@ -9,35 +9,74 @@
 * Date: Thu May 05 14:23:00 2011 -0600
 */
 
-(function( $ ){
+(function($){
 
-  $.fn.fitText = function( kompressor, options ) {
+	var initialized = false,
+		$targets = null,
+		options = {
+			minFontSize: Number.NEGATIVE_INFINITY,
+			maxFontSize: Number.POSITIVE_INFINITY
+		};
 
-    // Setup options
-    var compressor = kompressor || 1,
-        settings = $.extend({
-          'minFontSize' : Number.NEGATIVE_INFINITY,
-          'maxFontSize' : Number.POSITIVE_INFINITY
-        }, options);
+	var pub = {
+		destroy: function() {
+			var $target = $(this);
 
-    return this.each(function(){
+			$target.removeClass("fit-text")
+				   .css("font-size", "");
 
-      // Store the object
-      var $this = $(this);
+			$targets = $(".fit-text");
 
-      // Resizer() resizes items based on the object width divided by the compressor * 10
-      var resizer = function () {
-        $this.css('font-size', Math.max(Math.min($this.width() / (compressor*10), parseFloat(settings.maxFontSize)), parseFloat(settings.minFontSize)));
-      };
+			return $targets;
+		}
+	};
 
-      // Call once to set.
-      resizer();
+	function _init(com, opts) {
+		// Settings
+		opts = $.extend({}, options, opts);
+		opts.compressor = com || 1;
 
-      // Call on resize. Opera debounces their resize by default.
-      $(window).on('resize.fittext orientationchange.fittext', resizer);
+		// Apply to each element
+		var $items = $(this);
+		for (var i = 0, count = $items.length; i < count; i++) {
+			_build($items.eq(i), opts);
+		}
 
-    });
+		// Events
+		if (!initialized) {
+			initialized = true;
+			$(window).on("resize.fittext orientationchange.fittext", _onResize);
+		}
 
-  };
+		$targets = $(".fit-text");
 
-})( jQuery );
+		return $items;
+	}
+
+	function _build($target, opts) {
+		var data = $.extend({}, opts);
+		data.$target = $target;
+
+		$target.addClass("fit-text")
+			   .data("fit-text", data);
+	}
+
+	function _onResize(e) {
+		for (var i = 0, count = $targets.length; i < count; i++) {
+			var data = $targets.eq(i).data("fit-text");
+
+			if (typeof data !== "undefined") {
+				data.$target.css("font-size", Math.max(Math.min(data.$target.width() / (data.compressor*10), parseFloat(data.maxFontSize)), parseFloat(data.minFontSize)));
+			}
+		}
+	}
+
+	$.fn.fitText = function(method) {
+		if (pub[method]) {
+			return pub[method].apply(this, Array.prototype.slice.call(arguments, 1));
+		} else {
+			return _init.apply(this, arguments);
+		}
+		return this;
+	};
+})(jQuery);
